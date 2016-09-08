@@ -37,13 +37,14 @@ module.exports.pitch = function(request) {
 		}
 
 		if(query.extract !== false) {
+			var parentCompilation = this._compilation;
 			var childFilename = "extract-text-webpack-plugin-output-filename"; // eslint-disable-line no-path-concat
-			var publicPath = typeof query.publicPath === "string" ? query.publicPath : this._compilation.outputOptions.publicPath;
+			var publicPath = typeof query.publicPath === "string" ? query.publicPath : parentCompilation.outputOptions.publicPath;
 			var outputOptions = {
 				filename: childFilename,
 				publicPath: publicPath
 			};
-			var childCompiler = this._compilation.createChildCompiler("extract-text-webpack-plugin", outputOptions);
+			var childCompiler = parentCompilation.createChildCompiler("extract-text-webpack-plugin", outputOptions);
 			childCompiler.apply(new NodeTemplatePlugin(outputOptions));
 			childCompiler.apply(new LibraryTemplatePlugin(null, "commonjs2"));
 			childCompiler.apply(new NodeTargetPlugin());
@@ -74,6 +75,18 @@ module.exports.pitch = function(request) {
 						delete compilation.assets[file];
 					});
 				});
+
+				// Костыль начался
+				if (!parentCompilation.cssLoader) {
+					parentCompilation.cssLoader = { classnames: [] };
+				}
+				if (compilation.cssLoader) {
+					var globalClassNames = parentCompilation.cssLoader.classnames;
+					var localClassNames = compilation.cssLoader.classnames;
+
+					parentCompilation.cssLoader.classnames = globalClassNames.concat(localClassNames);
+				}
+				// Костыль закончился
 
 				callback();
 			});
